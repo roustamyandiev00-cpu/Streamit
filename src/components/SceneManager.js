@@ -1,118 +1,22 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  Plus, Play, Trash2, Copy, Eye, EyeOff,
-  Monitor, Camera, Image, Type, X
+  Plus, Play, Trash2, Copy, Monitor, Camera, 
+  Image, Type, X, Move, Eye, EyeOff, Layers
 } from 'lucide-react';
 
 export default function SceneManager({ onSceneChange, currentScene, scenes, onScenesUpdate }) {
-  const [selectedScene, setSelectedScene] = useState(currentScene || (scenes?.[0]?.id || 'scene1'));
+  const [selectedScene, setSelectedScene] = useState(currentScene || scenes?.[0]?.id);
   const [selectedSource, setSelectedSource] = useState(null);
-  const [showSourceModal, setShowSourceModal] = useState(false);
-  const canvasRef = useRef(null);
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [draggedSource, setDraggedSource] = useState(null);
 
   useEffect(() => {
-    if (scenes && scenes.length > 0 && !scenes.find(s => s.id === selectedScene)) {
-      setSelectedScene(scenes[0].id);
-    }
-  }, [scenes, selectedScene]);
-
-  useEffect(() => {
-    if (currentScene) {
-      setSelectedScene(currentScene);
-    }
+    if (currentScene) setSelectedScene(currentScene);
   }, [currentScene]);
 
-  useEffect(() => {
-    drawScenePreview();
-  }, [scenes, selectedScene, selectedSource]);
-
-  const drawScenePreview = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !scenes) return;
-
-    const ctx = canvas.getContext('2d');
-    const scene = scenes.find(s => s.id === selectedScene);
-    if (!scene) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw background
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw grid (subtle)
-    ctx.strokeStyle = '#1a1a1a';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < canvas.width; i += 30) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, canvas.height);
-      ctx.stroke();
-    }
-    for (let i = 0; i < canvas.height; i += 17) {
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(canvas.width, i);
-      ctx.stroke();
-    }
-
-    // Draw sources
-    scene.sources.forEach((source) => {
-      if (!source.visible) return;
-
-      const scaleX = canvas.width / 1920;
-      const scaleY = canvas.height / 1080;
-      
-      const x = source.x * scaleX;
-      const y = source.y * scaleY;
-      const width = source.width * scaleX;
-      const height = source.height * scaleY;
-
-      ctx.save();
-      ctx.globalAlpha = source.opacity || 1;
-
-      // Draw source rectangle with better colors
-      switch (source.type) {
-        case 'camera':
-          ctx.fillStyle = '#5c4dff';
-          break;
-        case 'screen':
-          ctx.fillStyle = '#00cc88';
-          break;
-        case 'image':
-          ctx.fillStyle = '#ffaa00';
-          break;
-        case 'text':
-          ctx.fillStyle = '#ff4444';
-          break;
-        default:
-          ctx.fillStyle = '#666';
-      }
-
-      ctx.fillRect(x, y, width, height);
-
-      // Draw source label
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(source.name, x + width/2, y + height/2);
-
-      // Draw selection border (dashed)
-      if (selectedSource === source.id) {
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
-        ctx.setLineDash([]);
-      }
-
-      ctx.restore();
-    });
-  };
+  const currentSceneData = scenes?.find(s => s.id === selectedScene);
 
   const addScene = () => {
     const newScene = {
@@ -124,135 +28,10 @@ export default function SceneManager({ onSceneChange, currentScene, scenes, onSc
     setSelectedScene(newScene.id);
   };
 
-  const duplicateScene = (sceneId) => {
-    const scene = scenes.find(s => s.id === sceneId);
-    if (!scene) return;
-
-    const newScene = {
-      ...scene,
-      id: `scene${Date.now()}`,
-      name: `${scene.name} Copy`,
-      sources: scene.sources.map(source => ({
-        ...source,
-        id: `${source.id}_copy_${Date.now()}`
-      }))
-    };
-    onScenesUpdate([...scenes, newScene]);
-  };
-
   const deleteScene = (sceneId) => {
     if (scenes.length <= 1) return;
     onScenesUpdate(scenes.filter(s => s.id !== sceneId));
-    if (selectedScene === sceneId) {
-      setSelectedScene(scenes[0].id);
-    }
-  };
-
-  const addSource = (type) => {
-    const scene = scenes.find(s => s.id === selectedScene);
-    if (!scene) return;
-
-    const newSource = {
-      id: `source${Date.now()}`,
-      type,
-      name: getSourceName(type),
-      x: type === 'screen' ? 0 : 100,
-      y: type === 'screen' ? 0 : 100,
-      width: getDefaultWidth(type),
-      height: getDefaultHeight(type),
-      visible: true,
-      opacity: 1,
-      zIndex: scene.sources.length + 1
-    };
-
-    const updatedScenes = scenes.map(s => 
-      s.id === selectedScene 
-        ? { ...s, sources: [...s.sources, newSource] }
-        : s
-    );
-    onScenesUpdate(updatedScenes);
-    setSelectedSource(newSource.id);
-    setShowSourceModal(false);
-  };
-
-  const getSourceName = (type) => {
-    switch (type) {
-      case 'camera': return 'Camera';
-      case 'screen': return 'Desktop';
-      case 'image': return 'Image';
-      case 'text': return 'Text';
-      default: return 'Source';
-    }
-  };
-
-  const getDefaultWidth = (type) => {
-    switch (type) {
-      case 'camera': return 400;
-      case 'screen': return 1920;
-      case 'image': return 400;
-      case 'text': return 300;
-      default: return 400;
-    }
-  };
-
-  const getDefaultHeight = (type) => {
-    switch (type) {
-      case 'camera': return 300;
-      case 'screen': return 1080;
-      case 'image': return 300;
-      case 'text': return 100;
-      default: return 300;
-    }
-  };
-
-  const updateSource = (sourceId, updates) => {
-    const updatedScenes = scenes.map(scene => 
-      scene.id === selectedScene
-        ? {
-            ...scene,
-            sources: scene.sources.map(source =>
-              source.id === sourceId ? { ...source, ...updates } : source
-            )
-          }
-        : scene
-    );
-    onScenesUpdate(updatedScenes);
-  };
-
-  const deleteSource = (sourceId) => {
-    const updatedScenes = scenes.map(scene => 
-      scene.id === selectedScene
-        ? {
-            ...scene,
-            sources: scene.sources.filter(source => source.id !== sourceId)
-          }
-        : scene
-    );
-    onScenesUpdate(updatedScenes);
-    setSelectedSource(null);
-  };
-
-  const handleCanvasClick = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (1920 / canvas.width);
-    const y = (e.clientY - rect.top) * (1080 / canvas.height);
-
-    const scene = scenes.find(s => s.id === selectedScene);
-    if (!scene) return;
-
-    // Find clicked source (check from top to bottom)
-    for (let i = scene.sources.length - 1; i >= 0; i--) {
-      const source = scene.sources[i];
-      if (x >= source.x && x <= source.x + source.width &&
-          y >= source.y && y <= source.y + source.height) {
-        setSelectedSource(source.id);
-        return;
-      }
-    }
-
-    setSelectedSource(null);
+    if (selectedScene === sceneId) setSelectedScene(scenes[0].id);
   };
 
   const switchToScene = (sceneId) => {
@@ -260,195 +39,211 @@ export default function SceneManager({ onSceneChange, currentScene, scenes, onSc
     onSceneChange?.(sceneId);
   };
 
-  const currentSceneData = scenes.find(s => s.id === selectedScene);
-  const selectedSourceData = currentSceneData?.sources.find(s => s.id === selectedSource);
+  const addSource = (type) => {
+    if (!currentSceneData) return;
+    const newSource = {
+      id: `source${Date.now()}`,
+      type,
+      name: type === 'camera' ? 'Webcam' : type === 'screen' ? 'Screen' : type.charAt(0).toUpperCase() + type.slice(1),
+      x: type === 'screen' ? 0 : 100,
+      y: type === 'screen' ? 0 : 100,
+      width: type === 'screen' ? 1920 : 400,
+      height: type === 'screen' ? 1080 : 300,
+      visible: true,
+      opacity: 1
+    };
+    const updated = scenes.map(s => s.id === selectedScene ? { ...s, sources: [...s.sources, newSource] } : s);
+    onScenesUpdate(updated);
+    setSelectedSource(newSource.id);
+    setShowAddSource(false);
+  };
+
+
+  const toggleSourceVisibility = (sourceId) => {
+    const updated = scenes.map(s => s.id === selectedScene ? {
+      ...s,
+      sources: s.sources.map(src => src.id === sourceId ? { ...src, visible: !src.visible } : src)
+    } : s);
+    onScenesUpdate(updated);
+  };
+
+  const deleteSource = (sourceId) => {
+    const updated = scenes.map(s => s.id === selectedScene ? {
+      ...s,
+      sources: s.sources.filter(src => src.id !== sourceId)
+    } : s);
+    onScenesUpdate(updated);
+    setSelectedSource(null);
+  };
+
+  const getSourceIcon = (type) => {
+    switch(type) {
+      case 'camera': return <Camera size={16} />;
+      case 'screen': return <Monitor size={16} />;
+      case 'image': return <Image size={16} />;
+      case 'text': return <Type size={16} />;
+      default: return <Layers size={16} />;
+    }
+  };
+
+  const getSourceColor = (type) => {
+    switch(type) {
+      case 'camera': return '#5c4dff';
+      case 'screen': return '#00cc88';
+      case 'image': return '#ffaa00';
+      case 'text': return '#ff6b6b';
+      default: return '#666';
+    }
+  };
 
   return (
-    <div className="scene-manager">
-      {/* Scenes List - Left Side */}
-      <div className="scenes-panel">
-        <div className="scenes-header">
-          <h3>Scenes</h3>
-          <button className="add-scene-btn" onClick={addScene} title="Add Scene">
-            <Plus size={18} />
+    <div className="scene-mgr">
+      {/* Scene Switcher - Horizontal tabs at top */}
+      <div className="scene-tabs">
+        {scenes?.map((scene, idx) => (
+          <button
+            key={scene.id}
+            className={`scene-tab ${selectedScene === scene.id ? 'active' : ''} ${currentScene === scene.id ? 'live' : ''}`}
+            onClick={() => switchToScene(scene.id)}
+          >
+            <span className="tab-num">{idx + 1}</span>
+            <span className="tab-name">{scene.name}</span>
+            {currentScene === scene.id && <span className="live-dot" />}
           </button>
-        </div>
-
-        <div className="scenes-list">
-          {scenes.map(scene => {
-            const sourceCount = scene.sources.length;
-            return (
-              <div 
-                key={scene.id}
-                className={`scene-card ${selectedScene === scene.id ? 'selected' : ''} ${currentScene === scene.id ? 'live' : ''}`}
-                onClick={() => setSelectedScene(scene.id)}
-              >
-                <div className="scene-thumbnail">
-                  {sourceCount > 0 ? (
-                    <div className="source-badge">{sourceCount}</div>
-                  ) : (
-                    <div className="empty-label">Empty</div>
-                  )}
-                </div>
-                <div className="scene-details">
-                  <div className="scene-title">{scene.name}</div>
-                  <div className="scene-sources">
-                    {scene.sources.slice(0, 3).map((_, idx) => (
-                      <div key={idx} className="source-indicator"></div>
-                    ))}
-                    {scene.sources.length > 3 && (
-                      <span className="more-indicator">+{scene.sources.length - 3}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="scene-actions">
-                  <button 
-                    className="scene-action-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      switchToScene(scene.id);
-                    }}
-                    title="Go Live"
-                  >
-                    <Play size={14} />
-                  </button>
-                  <button 
-                    className="scene-action-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      duplicateScene(scene.id);
-                    }}
-                    title="Duplicate"
-                  >
-                    <Copy size={14} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        ))}
+        <button className="add-scene-tab" onClick={addScene}>
+          <Plus size={16} />
+        </button>
       </div>
 
-      {/* Scene Editor - Right Side */}
-      <div className="editor-panel">
-        <div className="editor-header">
-          <div className="editor-title">
-            <h4>Scene Editor</h4>
-            <span className="scene-name">{currentSceneData?.name || 'No Scene'}</span>
-          </div>
-          <div className="editor-actions">
-            <button 
-              className="editor-btn"
-              onClick={() => setShowSourceModal(true)}
-              title="Add Source"
-            >
-              <Plus size={18} />
+      {/* Main Content Area */}
+      <div className="scene-content">
+        {/* Sources List */}
+        <div className="sources-section">
+          <div className="section-header">
+            <Layers size={16} />
+            <span>Sources</span>
+            <button className="add-btn" onClick={() => setShowAddSource(true)}>
+              <Plus size={14} />
+              Add
             </button>
           </div>
-        </div>
-
-        <div className="canvas-wrapper">
-          <canvas
-            ref={canvasRef}
-            width={320}
-            height={180}
-            onClick={handleCanvasClick}
-            className="scene-canvas"
-          />
-        </div>
-
-        {/* Source Properties */}
-        {selectedSourceData && (
-          <div className="source-properties">
-            <div className="properties-header">
-              <h5>{selectedSourceData.name}</h5>
-              <button 
-                className="delete-source-btn" 
-                onClick={() => deleteSource(selectedSource)}
-                title="Delete Source"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
+          
+          <div className="sources-list">
+            {currentSceneData?.sources.length === 0 && (
+              <div className="empty-sources">
+                <p>No sources yet</p>
+                <button onClick={() => setShowAddSource(true)}>
+                  <Plus size={14} /> Add your first source
+                </button>
+              </div>
+            )}
             
-            <div className="properties-form">
-              <div className="form-group">
-                <label>X Position</label>
-                <input
-                  type="number"
-                  value={selectedSourceData.x}
-                  onChange={(e) => updateSource(selectedSource, { x: parseInt(e.target.value) || 0 })}
-                />
+            {currentSceneData?.sources.map((source, idx) => (
+              <div 
+                key={source.id}
+                className={`source-item ${selectedSource === source.id ? 'selected' : ''} ${!source.visible ? 'hidden' : ''}`}
+                onClick={() => setSelectedSource(source.id)}
+              >
+                <div className="source-icon" style={{ background: `${getSourceColor(source.type)}20`, color: getSourceColor(source.type) }}>
+                  {getSourceIcon(source.type)}
+                </div>
+                <div className="source-info">
+                  <span className="source-name">{source.name}</span>
+                  <span className="source-type">{source.type}</span>
+                </div>
+                <div className="source-actions">
+                  <button 
+                    className={`action-btn ${!source.visible ? 'off' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); toggleSourceVisibility(source.id); }}
+                    title={source.visible ? 'Hide' : 'Show'}
+                  >
+                    {source.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                  <button 
+                    className="action-btn delete"
+                    onClick={(e) => { e.stopPropagation(); deleteSource(source.id); }}
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Y Position</label>
-                <input
-                  type="number"
-                  value={selectedSourceData.y}
-                  onChange={(e) => updateSource(selectedSource, { y: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
 
-        {!selectedSourceData && (
-          <div className="no-source-selected">
-            <p>Click on a source in the preview to edit</p>
+        {/* Preview */}
+        <div className="preview-section">
+          <div className="preview-header">
+            <span>Preview</span>
+            <span className="scene-label">{currentSceneData?.name}</span>
           </div>
-        )}
+          <div className="preview-canvas">
+            {currentSceneData?.sources.filter(s => s.visible).map(source => (
+              <div
+                key={source.id}
+                className={`preview-source ${selectedSource === source.id ? 'selected' : ''}`}
+                style={{
+                  left: `${(source.x / 1920) * 100}%`,
+                  top: `${(source.y / 1080) * 100}%`,
+                  width: `${(source.width / 1920) * 100}%`,
+                  height: `${(source.height / 1080) * 100}%`,
+                  background: getSourceColor(source.type),
+                  opacity: source.opacity
+                }}
+                onClick={() => setSelectedSource(source.id)}
+              >
+                <span>{source.name}</span>
+              </div>
+            ))}
+            {(!currentSceneData?.sources || currentSceneData.sources.length === 0) && (
+              <div className="empty-preview">
+                <Monitor size={32} />
+                <p>Add sources to see preview</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
+
       {/* Add Source Modal */}
-      {showSourceModal && (
-        <div className="modal-overlay" onClick={() => setShowSourceModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      {showAddSource && (
+        <div className="modal-overlay" onClick={() => setShowAddSource(false)}>
+          <div className="add-source-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Source</h3>
-              <button className="close-modal-btn" onClick={() => setShowSourceModal(false)}>
-                <X size={20} />
-              </button>
+              <button onClick={() => setShowAddSource(false)}><X size={20} /></button>
             </div>
-            
-            <div className="source-types-grid">
-              <button 
-                className="source-type-card"
-                onClick={() => addSource('screen')}
-              >
-                <div className="source-icon screen">
-                  <Monitor size={28} />
+            <div className="source-options">
+              <button className="source-option" onClick={() => addSource('screen')}>
+                <div className="option-icon screen"><Monitor size={24} /></div>
+                <div className="option-info">
+                  <strong>Screen Share</strong>
+                  <span>Share your entire screen or window</span>
                 </div>
-                <span>Screen</span>
               </button>
-              
-              <button 
-                className="source-type-card"
-                onClick={() => addSource('camera')}
-              >
-                <div className="source-icon camera">
-                  <Camera size={28} />
+              <button className="source-option" onClick={() => addSource('camera')}>
+                <div className="option-icon camera"><Camera size={24} /></div>
+                <div className="option-info">
+                  <strong>Webcam</strong>
+                  <span>Add your camera feed</span>
                 </div>
-                <span>Camera</span>
               </button>
-              
-              <button 
-                className="source-type-card"
-                onClick={() => addSource('image')}
-              >
-                <div className="source-icon image">
-                  <Image size={28} />
+              <button className="source-option" onClick={() => addSource('image')}>
+                <div className="option-icon image"><Image size={24} /></div>
+                <div className="option-info">
+                  <strong>Image</strong>
+                  <span>Add logo or background image</span>
                 </div>
-                <span>Image</span>
               </button>
-              
-              <button 
-                className="source-type-card"
-                onClick={() => addSource('text')}
-              >
-                <div className="source-icon text">
-                  <Type size={28} />
+              <button className="source-option" onClick={() => addSource('text')}>
+                <div className="option-icon text"><Type size={24} /></div>
+                <div className="option-info">
+                  <strong>Text</strong>
+                  <span>Add text overlay or title</span>
                 </div>
-                <span>Text</span>
               </button>
             </div>
           </div>
@@ -456,339 +251,355 @@ export default function SceneManager({ onSceneChange, currentScene, scenes, onSc
       )}
 
       <style jsx>{`
-        .scene-manager {
+        .scene-mgr {
           display: flex;
-          gap: 1rem;
+          flex-direction: column;
           height: 100%;
-          min-height: 500px;
-        }
-
-        /* Scenes Panel - Left */
-        .scenes-panel {
-          width: 200px;
-          background: #1a1a1f;
-          border-radius: 8px;
-          border: 1px solid #2d2e36;
-          display: flex;
-          flex-direction: column;
-          flex-shrink: 0;
-        }
-
-        .scenes-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1rem;
-          border-bottom: 1px solid #2d2e36;
-        }
-
-        .scenes-header h3 {
-          margin: 0;
-          color: white;
-          font-size: 0.9rem;
-          font-weight: 600;
-        }
-
-        .add-scene-btn {
-          background: #5c4dff;
-          border: none;
-          color: white;
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .add-scene-btn:hover {
-          background: #4a3dd9;
-          transform: scale(1.05);
-        }
-
-        .scenes-list {
-          flex: 1;
-          overflow-y: auto;
-          padding: 0.5rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .scene-card {
-          background: #2a2b33;
-          border-radius: 6px;
-          cursor: pointer;
-          border: 2px solid transparent;
-          transition: all 0.2s;
-          overflow: hidden;
-        }
-
-        .scene-card:hover {
-          background: #33343d;
-        }
-
-        .scene-card.selected {
-          border-color: #5c4dff;
-          background: #33343d;
-        }
-
-        .scene-card.live {
-          border-color: #ff4444;
-        }
-
-        .scene-thumbnail {
-          width: 100%;
-          height: 60px;
-          background: #000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-        }
-
-        .source-badge {
-          background: #5c4dff;
-          color: white;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-
-        .empty-label {
-          color: #666;
-          font-size: 0.75rem;
-        }
-
-        .scene-details {
-          padding: 0.5rem;
-        }
-
-        .scene-title {
-          color: white;
-          font-size: 0.85rem;
-          font-weight: 600;
-          margin-bottom: 0.25rem;
-        }
-
-        .scene-sources {
-          display: flex;
-          gap: 0.25rem;
-          align-items: center;
-        }
-
-        .source-indicator {
-          width: 4px;
-          height: 4px;
-          background: #666;
-          border-radius: 50%;
-        }
-
-        .more-indicator {
-          color: #666;
-          font-size: 0.7rem;
-        }
-
-        .scene-actions {
-          display: flex;
-          gap: 0.25rem;
-          padding: 0 0.5rem 0.5rem;
-        }
-
-        .scene-action-btn {
-          background: transparent;
-          border: 1px solid #444;
-          color: #999;
-          width: 24px;
-          height: 24px;
-          border-radius: 4px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .scene-action-btn:hover {
-          border-color: #5c4dff;
-          color: white;
-          background: rgba(92, 77, 255, 0.1);
-        }
-
-        /* Editor Panel - Right */
-        .editor-panel {
-          flex: 1;
-          background: #1a1a1f;
-          border-radius: 8px;
-          border: 1px solid #2d2e36;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .editor-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1rem;
-          border-bottom: 1px solid #2d2e36;
-        }
-
-        .editor-title {
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-
-        .editor-title h4 {
-          margin: 0;
-          color: white;
-          font-size: 0.9rem;
-          font-weight: 600;
-        }
-
-        .editor-title .scene-name {
-          color: #999;
-          font-size: 0.75rem;
-        }
-
-        .editor-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .editor-btn {
-          background: transparent;
-          border: 1px solid #444;
-          color: #999;
-          width: 32px;
-          height: 32px;
-          border-radius: 6px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .editor-btn:hover {
-          border-color: #5c4dff;
-          color: white;
-          background: rgba(92, 77, 255, 0.1);
-        }
-
-        .canvas-wrapper {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #000;
-          padding: 1rem;
-          min-height: 200px;
-        }
-
-        .scene-canvas {
-          border: 1px solid #333;
-          cursor: crosshair;
-          width: 100%;
-          max-width: 400px;
-          height: auto;
-          border-radius: 4px;
-        }
-
-        .source-properties {
-          border-top: 1px solid #2d2e36;
-          padding: 1rem;
-          background: #1a1a1f;
-        }
-
-        .properties-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-
-        .properties-header h5 {
-          margin: 0;
-          color: white;
-          font-size: 0.85rem;
-          font-weight: 600;
-        }
-
-        .delete-source-btn {
-          background: transparent;
-          border: 1px solid #ff4444;
-          color: #ff4444;
-          width: 28px;
-          height: 28px;
-          border-radius: 4px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .delete-source-btn:hover {
-          background: rgba(255, 68, 68, 0.1);
-        }
-
-        .properties-form {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
           gap: 0.75rem;
         }
 
-        .form-group {
+        /* Scene Tabs */
+        .scene-tabs {
           display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
+          gap: 0.5rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid #2d2e36;
+          overflow-x: auto;
         }
 
-        .form-group label {
+        .scene-tab {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background: #2a2b33;
+          border: 2px solid transparent;
+          border-radius: 8px;
           color: #999;
-          font-size: 0.75rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+
+        .scene-tab:hover {
+          background: #33343d;
+          color: white;
+        }
+
+        .scene-tab.active {
+          background: #33343d;
+          border-color: #5c4dff;
+          color: white;
+        }
+
+        .scene-tab.live {
+          border-color: #ff4444;
+        }
+
+        .tab-num {
+          width: 20px;
+          height: 20px;
+          background: #5c4dff;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: white;
+        }
+
+        .tab-name {
+          font-size: 0.85rem;
           font-weight: 500;
         }
 
-        .form-group input {
-          background: #000;
-          border: 1px solid #444;
-          color: white;
+        .live-dot {
+          width: 8px;
+          height: 8px;
+          background: #ff4444;
+          border-radius: 50%;
+          animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        .add-scene-tab {
           padding: 0.5rem;
-          border-radius: 4px;
-          font-size: 0.85rem;
+          background: transparent;
+          border: 1px dashed #444;
+          border-radius: 8px;
+          color: #666;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
-        .form-group input:focus {
-          outline: none;
+        .add-scene-tab:hover {
           border-color: #5c4dff;
+          color: #5c4dff;
         }
 
-        .no-source-selected {
-          border-top: 1px solid #2d2e36;
-          padding: 1rem;
+        /* Main Content */
+        .scene-content {
+          display: grid;
+          grid-template-columns: 1fr 1.5fr;
+          gap: 1rem;
+          flex: 1;
+          min-height: 0;
+        }
+
+        /* Sources Section */
+        .sources-section {
+          display: flex;
+          flex-direction: column;
+          background: #1a1a1f;
+          border-radius: 8px;
+          border: 1px solid #2d2e36;
+          overflow: hidden;
+        }
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          background: #222;
+          border-bottom: 1px solid #2d2e36;
+          color: #999;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .section-header .add-btn {
+          margin-left: auto;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.35rem 0.75rem;
+          background: #5c4dff;
+          border: none;
+          border-radius: 6px;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .section-header .add-btn:hover {
+          background: #4a3dd9;
+        }
+
+        .sources-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 0.5rem;
+        }
+
+        .empty-sources {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          color: #666;
           text-align: center;
         }
 
-        .no-source-selected p {
-          color: #666;
+        .empty-sources p {
+          margin: 0 0 1rem 0;
+          font-size: 0.85rem;
+        }
+
+        .empty-sources button {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background: #5c4dff;
+          border: none;
+          border-radius: 6px;
+          color: white;
           font-size: 0.8rem;
+          cursor: pointer;
+        }
+
+        .source-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem;
+          background: #2a2b33;
+          border: 2px solid transparent;
+          border-radius: 8px;
+          margin-bottom: 0.5rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .source-item:hover {
+          background: #33343d;
+        }
+
+        .source-item.selected {
+          border-color: #5c4dff;
+          background: #33343d;
+        }
+
+        .source-item.hidden {
+          opacity: 0.5;
+        }
+
+        .source-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .source-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+        }
+
+        .source-name {
+          color: white;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+
+        .source-type {
+          color: #666;
+          font-size: 0.7rem;
+          text-transform: uppercase;
+        }
+
+        .source-actions {
+          display: flex;
+          gap: 0.25rem;
+        }
+
+        .action-btn {
+          width: 28px;
+          height: 28px;
+          background: transparent;
+          border: 1px solid #444;
+          border-radius: 6px;
+          color: #999;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+          border-color: #5c4dff;
+          color: white;
+        }
+
+        .action-btn.off {
+          color: #ff6b6b;
+          border-color: #ff6b6b33;
+        }
+
+        .action-btn.delete:hover {
+          border-color: #ff4444;
+          color: #ff4444;
+          background: #ff444420;
+        }
+
+
+        /* Preview Section */
+        .preview-section {
+          display: flex;
+          flex-direction: column;
+          background: #1a1a1f;
+          border-radius: 8px;
+          border: 1px solid #2d2e36;
+          overflow: hidden;
+        }
+
+        .preview-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.75rem 1rem;
+          background: #222;
+          border-bottom: 1px solid #2d2e36;
+          color: #999;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .scene-label {
+          color: #5c4dff;
+          font-weight: 500;
+        }
+
+        .preview-canvas {
+          flex: 1;
+          position: relative;
+          background: #000;
+          aspect-ratio: 16/9;
+          overflow: hidden;
+        }
+
+        .preview-source {
+          position: absolute;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid transparent;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .preview-source:hover {
+          border-color: rgba(255,255,255,0.3);
+        }
+
+        .preview-source.selected {
+          border-color: white;
+          box-shadow: 0 0 0 2px rgba(92, 77, 255, 0.5);
+        }
+
+        .preview-source span {
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .empty-preview {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          color: #444;
+          gap: 0.5rem;
+        }
+
+        .empty-preview p {
           margin: 0;
+          font-size: 0.8rem;
         }
 
         /* Modal */
         .modal-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.8);
+          background: rgba(0,0,0,0.8);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -796,105 +607,98 @@ export default function SceneManager({ onSceneChange, currentScene, scenes, onSc
           backdrop-filter: blur(4px);
         }
 
-        .modal-content {
+        .add-source-modal {
           background: #1a1a1f;
           border: 1px solid #2d2e36;
           border-radius: 12px;
-          padding: 1.5rem;
-          width: 400px;
+          width: 420px;
           max-width: 90vw;
+          overflow: hidden;
         }
 
         .modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 1.5rem;
+          padding: 1rem 1.25rem;
+          border-bottom: 1px solid #2d2e36;
         }
 
         .modal-header h3 {
           margin: 0;
           color: white;
           font-size: 1rem;
-          font-weight: 600;
         }
 
-        .close-modal-btn {
+        .modal-header button {
           background: transparent;
           border: none;
           color: #666;
           cursor: pointer;
           padding: 0.25rem;
           display: flex;
-          align-items: center;
-          justify-content: center;
           border-radius: 4px;
-          transition: all 0.2s;
         }
 
-        .close-modal-btn:hover {
+        .modal-header button:hover {
           background: #2a2b33;
           color: white;
         }
 
-        .source-types-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0.75rem;
-        }
-
-        .source-type-card {
+        .source-options {
+          padding: 0.75rem;
           display: flex;
           flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .source-option {
+          display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 1.5rem;
+          gap: 1rem;
+          padding: 1rem;
           background: #2a2b33;
           border: 1px solid #333;
-          border-radius: 8px;
-          color: white;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s;
+          text-align: left;
         }
 
-        .source-type-card:hover {
+        .source-option:hover {
           border-color: #5c4dff;
           background: #33343d;
-          transform: translateY(-2px);
+          transform: translateX(4px);
         }
 
-        .source-icon {
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
+        .option-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
-        .source-icon.screen {
-          background: rgba(0, 204, 136, 0.15);
-          color: #00cc88;
+        .option-icon.screen { background: #00cc8820; color: #00cc88; }
+        .option-icon.camera { background: #5c4dff20; color: #5c4dff; }
+        .option-icon.image { background: #ffaa0020; color: #ffaa00; }
+        .option-icon.text { background: #ff6b6b20; color: #ff6b6b; }
+
+        .option-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
         }
 
-        .source-icon.camera {
-          background: rgba(92, 77, 255, 0.15);
-          color: #5c4dff;
+        .option-info strong {
+          color: white;
+          font-size: 0.9rem;
         }
 
-        .source-icon.image {
-          background: rgba(255, 170, 0, 0.15);
-          color: #ffaa00;
-        }
-
-        .source-icon.text {
-          background: rgba(255, 68, 68, 0.15);
-          color: #ff4444;
-        }
-
-        .source-type-card span {
-          font-size: 0.85rem;
-          font-weight: 500;
+        .option-info span {
+          color: #666;
+          font-size: 0.75rem;
         }
       `}</style>
     </div>

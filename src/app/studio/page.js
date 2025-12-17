@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useSocket } from '../../hooks/useSocket';
 import { useHotkeys, defaultStudioHotkeys } from '../../hooks/useHotkeys';
@@ -26,6 +27,21 @@ import TemplateEditor from '../../components/TemplateEditor';
 function StudioPageContent() {
   const searchParams = useSearchParams();
   const streamId = searchParams.get('streamId');
+  const { data: session } = useSession();
+
+  const handleUpgrade = async () => {
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (e) {
+      console.error("Upgrade failed", e);
+    }
+  };
 
   const camVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
@@ -574,10 +590,10 @@ function StudioPageContent() {
 
   const handleResizeMove = useCallback((e) => {
     if (!isResizing) return;
-    
+
     const containerWidth = window.innerWidth;
     const newWidth = containerWidth - e.clientX;
-    
+
     // Limit sidebar width between 280px and 600px
     if (newWidth >= 280 && newWidth <= 600) {
       setSidebarWidth(newWidth);
@@ -695,9 +711,9 @@ function StudioPageContent() {
   ];
 
   useHotkeys(studioHotkeys, [
-    isRecording, micOn, camOn, showHotkeys, 
-    startRecording, stopRecording, toggleLive, 
-    updateStudioSettings, toggleScreenShare, 
+    isRecording, micOn, camOn, showHotkeys,
+    startRecording, stopRecording, toggleLive,
+    updateStudioSettings, toggleScreenShare,
     handleSceneChange, setActiveTab, setShowHotkeys
   ]);
 
@@ -791,6 +807,30 @@ function StudioPageContent() {
                 DEMO
               </span>
             )}
+            {!loading && session?.user && !session.user.isPro && !demoMode && (
+              <button
+                onClick={handleUpgrade}
+                style={{
+                  marginLeft: '1rem',
+                  background: 'linear-gradient(90deg, #ff4d4d, #f9cb28)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 10px rgba(255, 77, 77, 0.3)'
+                }}
+              >
+                <span>720p</span>
+                <span style={{ opacity: 0.6 }}>|</span>
+                <span style={{ textDecoration: 'underline' }}>Upgrade to 1080p</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -829,14 +869,14 @@ function StudioPageContent() {
         {/* Main Stage */}
         <main className="studio-stage">
           <div className="stage-canvas" style={{ position: 'relative', width: '100%', height: '100%', maxWidth: '1280px', aspectRatio: '16/9' }}>
-            <StageRenderer 
+            <StageRenderer
               scene={scenes.find(s => s.id === currentScene)}
               camStream={camStream}
               screenStream={screenStream}
               micOn={micOn}
               audioLevel={audioLevel}
             />
-            
+
             {/* Overlays (Keep existing overlay logic on top of stage) */}
             {showOverlay && isLive && (
               <div className={`overlay-layer pos-${logoPosition}`} style={{ pointerEvents: 'none' }}>
@@ -853,14 +893,14 @@ function StudioPageContent() {
         </main>
 
         {/* Right Sidebar */}
-        <aside 
+        <aside
           ref={sidebarRef}
           className={`right-sidebar ${sidebarOpen ? 'open' : 'closed'}`}
           style={{ width: sidebarOpen ? `${sidebarWidth}px` : '0px' }}
         >
           {/* Resize Handle */}
           {sidebarOpen && (
-            <div 
+            <div
               className="sidebar-resize-handle"
               onMouseDown={handleResizeStart}
             />
@@ -987,11 +1027,11 @@ function StudioPageContent() {
             {activeTab === 'audio' && (
               <div className="tab-content">
                 <div className="pane-header">Audio Mixer</div>
-                <AudioMixer 
-                  streams={{ 
-                    microphone: camStream, 
-                    screen: screenStream 
-                  }} 
+                <AudioMixer
+                  streams={{
+                    microphone: camStream,
+                    screen: screenStream
+                  }}
                   onAudioChange={handleAudioChange}
                   micEnabled={micOn}
                 />
@@ -1342,7 +1382,7 @@ function StudioPageContent() {
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="hotkeys-content">
               {Object.entries(
                 defaultStudioHotkeys.reduce((acc, hotkey) => {
@@ -1364,7 +1404,7 @@ function StudioPageContent() {
                 </div>
               ))}
             </div>
-            
+
             <div className="hotkeys-footer">
               <p>Press <kbd>Ctrl+Shift+H</kbd> to toggle this help</p>
             </div>

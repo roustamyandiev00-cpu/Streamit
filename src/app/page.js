@@ -12,6 +12,8 @@ import { useSession, signOut } from 'next-auth/react';
 import { useStreamStore } from '../store/useStreamStore';
 import PlatformManager from '../components/PlatformManager';
 
+const MAX_FREE_STREAMS = 3;
+
 export default function Dashboard() {
     const [activeTab, setActiveTab] = useState('Home');
     const [showNewStreamModal, setShowNewStreamModal] = useState(false);
@@ -103,9 +105,8 @@ export default function Dashboard() {
                             <path d="M2 12L12 17L22 12" stroke="url(#gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             <defs>
                                 <linearGradient id="gradient" x1="0" y1="0" x2="24" y2="24">
-                                    <stop offset="0%" stopColor="#5c4dff" />
-                                    <stop offset="50%" stopColor="#7c3aed" />
-                                    <stop offset="100%" stopColor="#a64aff" />
+                                    <stop offset="0%" stopColor="#2563eb" />
+                                    <stop offset="100%" stopColor="#1d4ed8" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -255,10 +256,32 @@ export default function Dashboard() {
                                 Get more power! Upgrade
                             </button>
                         </Link>
+                        {user && !user.isPro && (
+                            <div className="usage-meter" style={{ marginRight: '1rem', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '140px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#a1a1aa' }}>
+                                    <span>Free Streams</span>
+                                    <span>{filteredStreams.length} / {MAX_FREE_STREAMS}</span>
+                                </div>
+                                <div style={{ width: '100%', height: '6px', background: '#27272a', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{
+                                        width: `${Math.min((filteredStreams.length / MAX_FREE_STREAMS) * 100, 100)}%`,
+                                        height: '100%',
+                                        background: filteredStreams.length >= MAX_FREE_STREAMS ? '#ef4444' : '#5c4dff',
+                                        transition: 'width 0.5s ease'
+                                    }} />
+                                </div>
+                            </div>
+                        )}
                         <button
                             className="btn-primary"
                             style={{ background: '#3f414d' }}
-                            onClick={() => setShowNewStreamModal(true)}
+                            onClick={() => {
+                                if (user && !user.isPro && filteredStreams.length >= MAX_FREE_STREAMS) {
+                                    alert('You have reached your weekly stream limit. Please upgrade to Pro for unlimited streams.');
+                                    return;
+                                }
+                                setShowNewStreamModal(true);
+                            }}
                         >
                             <Plus size={16} style={{ marginRight: '0.5rem' }} />
                             New Stream
