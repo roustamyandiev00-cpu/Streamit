@@ -1,0 +1,36 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/src/generated/prisma
+
+# Logs
+logs/
+*.log
+firebase-debug.log
+server.log
+
+# Database files (dev)
+dev.db
+*.db-journal
+
+# Next.js
+.next/
+out/
+
+# Vercel
+.vercel/
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+*storybook.log
+storybook-static

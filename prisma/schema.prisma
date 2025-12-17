@@ -1,0 +1,316 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  streams  Stream[]
+  platformConnections PlatformConnection[]
+  subscription Subscription?
+  clips    Clip[]
+  templates StreamTemplate[]
+  templateUsage StreamTemplateUsage[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Stream {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  type        String
+  status      String      @default("DRAFT")
+  rtmpKey     String?     @unique
+  thumbnailUrl String?
+  
+  // Settings
+  isRecording Boolean     @default(false)
+  isLive      Boolean     @default(false)
+  viewerCount Int         @default(0)
+  
+  // Branding
+  brandColor  String      @default("#5c4dff")
+  showOverlay Boolean     @default(true)
+  userName    String?
+  userTitle   String?
+  
+  // Timestamps
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  startedAt   DateTime?
+  endedAt     DateTime?
+  
+  // Relations
+  userId      String
+  templateId  String?  // Optional template reference
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatMessages ChatMessage[]
+  analytics   StreamAnalytics[]
+  clips       Clip[]
+  simulcastPlatforms StreamPlatform[]
+  appliedTemplate StreamTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  message   String
+  username  String
+  color     String?
+  timestamp DateTime @default(now())
+  
+  streamId  String
+  stream    Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model StreamAnalytics {
+  id           String   @id @default(cuid())
+  streamId     String
+  timestamp    DateTime @default(now())
+  viewerCount  Int      @default(0)
+  chatMessages Int      @default(0)
+  duration     Int      @default(0) // in seconds
+  
+  stream       Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+}
+
+
+
+// Note: SQLite doesn't support enums, using String with validation in code
+// Platform values: YOUTUBE, TWITCH, FACEBOOK, INSTAGRAM, CUSTOM
+// Plan values: FREE, PRO, BUSINESS
+// SubscriptionStatus values: ACTIVE, CANCELED, PAST_DUE, TRIALING
+
+model PlatformConnection {
+  id           String   @id @default(cuid())
+  userId       String
+  platform     String   // YOUTUBE, TWITCH, FACEBOOK, INSTAGRAM, CUSTOM
+  accessToken  String?  // Encrypted - OAuth access token
+  refreshToken String?  // Encrypted - OAuth refresh token
+  streamKey    String?  // Encrypted - Platform stream key
+  rtmpUrl      String
+  protocol     String   @default("RTMP") // RTMP, RTMPS, SRT, WHIP
+  server       String?  // Server selection (autodetect, custom)
+  channelName  String?  // Display name on platform
+  channelId    String?  // Platform-specific channel ID
+  isActive     Boolean  @default(false)
+  followers    Int      @default(0)
+  metadata     String?  // JSON string for additional platform-specific data
+  
+  connectedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  simulcastPlatforms StreamPlatform[]
+  
+  @@unique([userId, platform])
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  plan                 String   @default("FREE") // FREE, PRO, BUSINESS
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  status               String   @default("ACTIVE") // ACTIVE, CANCELED, PAST_DUE, TRIALING
+  currentPeriodStart   DateTime @default(now())
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Clip {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  
+  // Source
+  streamId      String
+  stream        Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  // Video metadata
+  videoUrl      String?  // Path to generated clip video
+  thumbnailUrl  String?  // Thumbnail image
+  duration      Int      @default(0) // Duration in seconds
+  startTime     Int      @default(0) // Start time in source video (seconds)
+  endTime       Int      @default(0) // End time in source video (seconds)
+  
+  // Format settings
+  aspectRatio   String   @default("9:16") // 9:16 (vertical), 16:9 (horizontal), 1:1 (square)
+  resolution    String?  // e.g., "1080x1920"
+  hasCaptions   Boolean  @default(true)
+  captionText   String?  // Auto-generated captions
+  
+  // AI metadata
+  highlightScore Float?  // AI confidence score (0-1)
+  highlightType  String? // "peak_viewers", "chat_spike", "emotion", "action", etc.
+  detectedLanguage String? @default("en")
+  
+  // Status
+  status        String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  processingProgress Int @default(0) // 0-100
+  
+  // Export settings
+  exportFormats String?  // JSON array of formats: ["mp4", "webm"]
+  exportedUrls  String? // JSON object with platform URLs
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  processedAt   DateTime?
+  
+  // Relations
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([streamId])
+  @@index([userId])
+  @@index([status])
+}
+
+model StreamPlatform {
+  id            String   @id @default(cuid())
+  streamId      String
+  platformId    String   // Reference to PlatformConnection id
+  platform      String   // YOUTUBE, TWITCH, FACEBOOK, etc.
+  
+  // Status
+  status        String   @default("PENDING") // PENDING, CONNECTING, LIVE, FAILED, STOPPED
+  errorMessage  String?
+  
+  // Stream settings for this platform
+  bitrate       Int?     // Platform-specific bitrate override
+  resolution    String?  // Platform-specific resolution override
+  
+  // RTMP details
+  rtmpUrl       String
+  streamKey     String?  // Encrypted in production
+  protocol      String   @default("RTMP")
+  
+  // Monitoring
+  viewerCount   Int      @default(0)
+  lastUpdate    DateTime @default(now())
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  connectedAt   DateTime?
+  disconnectedAt DateTime?
+  
+  // Relations
+  stream        Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  platformConnectionId String?
+  platformConnection PlatformConnection? @relation(fields: [platformConnectionId], references: [id], onDelete: SetNull)
+  
+  @@unique([streamId, platformId])
+  @@index([streamId])
+  @@index([platformId])
+  @@index([status])
+}
+
+model StreamTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  category      String   // "gaming", "podcast", "webinar", "custom"
+  thumbnailUrl  String?
+  
+  // Template configuration (JSON)
+  config        String   // JSON string containing: scenes, overlays, audio, platforms, etc.
+  
+  // Visibility
+  isPublic      Boolean  @default(false)
+  isSystem      Boolean  @default(false) // System templates vs user-created
+  isDefault     Boolean  @default(false) // Default template for category
+  
+  // Usage tracking
+  usageCount    Int      @default(0)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  userId        String?  // null for system templates
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  streams       Stream[] // Streams using this template
+  usageHistory  StreamTemplateUsage[]
+  
+  @@index([category])
+  @@index([isPublic])
+  @@index([userId])
+}
+
+model StreamTemplateUsage {
+  id            String   @id @default(cuid())
+  templateId    String
+  streamId      String?
+  userId        String
+  
+  // Timestamps
+  usedAt        DateTime @default(now())
+  
+  // Relations
+  template      StreamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([templateId])
+  @@index([userId])
+  @@index([usedAt])
+}

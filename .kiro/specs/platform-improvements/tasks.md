@@ -1,0 +1,121 @@
+# Implementation Plan
+
+- [x] 1. Setup TypeScript en Testing Infrastructure
+  - [x] 1.1 Installeer TypeScript dependencies en configureer tsconfig.json
+    - Installeer typescript, @types/react, @types/node
+    - Configureer strict mode en path aliases
+    - _Requirements: 1.1, 1.2_
+  - [x] 1.2 Installeer en configureer Vitest met fast-check
+    - Installeer vitest, @testing-library/react, @testing-library/jest-dom, fast-check
+    - Maak vitest.config.ts en src/test/setup.ts
+    - _Requirements: 4.1, 4.4, 5.1_
+  - [x] 1.3 Schrijf basis test om setup te verifiëren
+    - Maak een simpele test die slaagt om de setup te valideren
+    - _Requirements: 4.1_
+
+- [x] 2. Implementeer Zod Validation Schemas
+  - [x] 2.1 Installeer Zod en maak stream validation schema
+    - Installeer zod package
+    - Maak src/lib/validations/stream.ts met createStreamSchema en updateStreamSchema
+    - Implementeer title validatie (1-100 karakters)
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [x] 2.2 Schrijf property test voor title length validation
+    - **Property 1: Title Length Validation**
+    - **Validates: Requirements 2.2**
+  - [x] 2.3 Maak platform validation schema
+    - Maak src/lib/validations/platform.ts met platformSchema
+    - Implementeer streamKey format validatie
+    - _Requirements: 2.4_
+  - [x] 2.4 Schrijf property test voor streamKey format validation
+    - **Property 2: StreamKey Format Validation**
+    - **Validates: Requirements 2.4**
+  - [x] 2.5 Implementeer ValidationError class met JSON serialization
+    - Maak src/lib/errors.ts met ValidationError class
+    - Implementeer toJSON() en fromZodError() methods
+    - _Requirements: 2.1, 2.5, 2.6_
+  - [x] 2.6 Schrijf property test voor validation error round-trip
+    - **Property 3: Validation Error Round-Trip**
+    - **Validates: Requirements 2.5, 2.6**
+  - [x] 2.7 Schrijf property test voor validation schema consistency
+    - **Property 7: Validation Schema Consistency**
+    - **Validates: Requirements 5.3**
+
+- [x] 3. Checkpoint - Zorg dat alle tests slagen
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 4. Implementeer Rate Limiting
+  - [x] 4.1 Maak in-memory rate limiter implementatie
+    - Maak src/lib/rate-limit.ts met RateLimiter class
+    - Implementeer sliding window algoritme
+    - Configureer 10 requests per 10 seconden voor anonymous users
+    - Configureer hogere limiet voor authenticated users
+    - _Requirements: 3.1, 3.3_
+  - [x] 4.2 Schrijf property test voor rate limit threshold
+    - **Property 4: Rate Limit Threshold Enforcement**
+    - **Validates: Requirements 3.1**
+  - [x] 4.3 Implementeer RateLimitError class met Retry-After header
+    - Voeg RateLimitError toe aan src/lib/errors.ts
+    - Implementeer toResponse() met Retry-After header
+    - _Requirements: 3.2_
+  - [x] 4.4 Schrijf property test voor Retry-After header
+    - **Property 5: Rate Limit Retry-After Header**
+    - **Validates: Requirements 3.2**
+  - [x] 4.5 Schrijf property test voor authenticated rate limit advantage
+    - **Property 6: Authenticated Rate Limit Advantage**
+    - **Validates: Requirements 3.3**
+  - [x] 4.6 Schrijf property test voor rate limit order independence
+    - **Property 8: Rate Limit Order Independence (Confluence)**
+    - **Validates: Requirements 5.4**
+
+- [x] 5. Checkpoint - Zorg dat alle tests slagen
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Integreer Validatie in API Routes
+  - [x] 6.1 Maak API error handler wrapper
+    - Maak src/lib/api-handler.ts met withErrorHandler functie
+    - Integreer ValidationError en RateLimitError handling
+    - _Requirements: 2.1_
+  - [x] 6.2 Update streams API route met Zod validatie
+    - Migreer src/app/api/streams/route.js naar TypeScript
+    - Integreer createStreamSchema validatie in POST handler
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [x] 6.3 Update platforms API route met Zod validatie
+    - Migreer src/app/api/platforms/route.js naar TypeScript
+    - Integreer platformSchema validatie
+    - _Requirements: 2.4_
+  - [x] 6.4 Schrijf integration tests voor API validatie
+    - Test dat ongeldige input 400 status retourneert
+    - Test dat geldige input wordt geaccepteerd
+    - _Requirements: 2.1_
+
+- [x] 7. Implementeer Security Headers
+  - [x] 7.1 Voeg security headers toe aan next.config.js
+    - Configureer X-Frame-Options: DENY
+    - Configureer X-Content-Type-Options: nosniff
+    - Configureer Referrer-Policy: strict-origin-when-cross-origin
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - [x] 7.2 Schrijf tests voor security headers
+    - Verifieer dat alle security headers aanwezig zijn in responses
+    - _Requirements: 6.1, 6.2, 6.3_
+
+- [x] 8. Migreer Core Library Files naar TypeScript
+  - [x] 8.1 Migreer src/lib/logger.js naar TypeScript
+    - Hernoem naar logger.ts
+    - Voeg type annotations toe
+    - Implementeer Logger interface
+    - _Requirements: 1.3_
+  - [x] 8.2 Migreer src/lib/db.js naar TypeScript
+    - Hernoem naar db.ts
+    - Voeg Prisma client types toe
+    - _Requirements: 1.3, 1.5_
+  - [x] 8.3 Migreer src/lib/auth.js naar TypeScript
+    - Hernoem naar auth.ts
+    - Voeg User type annotations toe
+    - Type getCurrentUser, getCurrentUserId, requireAuth functies
+    - _Requirements: 1.3, 1.4_
+  - [x] 8.4 Schrijf unit tests voor auth utility functies
+    - Test getCurrentUser, getCurrentUserId, requireAuth
+    - _Requirements: 4.1, 4.3_
+
+- [x] 9. Final Checkpoint - Zorg dat alle tests slagen
+  - Ensure all tests pass, ask the user if questions arise.
