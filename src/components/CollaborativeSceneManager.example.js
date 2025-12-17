@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import * as Y from 'yjs';
 import { useYjsCollaboration, useYjsState } from '../hooks/useYjsCollaboration';
 import { Users, Wifi, WifiOff } from 'lucide-react';
 
