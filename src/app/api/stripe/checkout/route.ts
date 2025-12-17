@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
-import { prisma } from "@/lib/prisma"; // Assuming prisma is exported from here, need to verify
+import { prisma } from "@/lib/db";
 import { absoluteUrl } from "@/lib/utils";
 
 const settingsUrl = absoluteUrl("/settings");

@@ -43,7 +43,7 @@ export const authOptions: NextAuthOptions = {
         // For now, check every time to be safe.
         try {
           // We need to use the imported prisma from lib
-          const { prisma } = await import('./prisma');
+          const { prisma } = await import('./db');
           const subscription = await prisma.subscription.findUnique({
             where: { userId: user.id },
             select: { status: true, currentPeriodEnd: true }

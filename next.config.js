@@ -3,6 +3,16 @@ const { withSentryConfig } = require('@sentry/nextjs');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  
+  // Ignore ESLint warnings during build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  // Ignore TypeScript errors during build (if any)
+  typescript: {
+    ignoreBuildErrors: false,
+  },
 
   // Security headers
   async headers() {

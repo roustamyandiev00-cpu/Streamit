@@ -2,12 +2,10 @@
 
 import React, { useState } from 'react';
 import { Check, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function PricingPage() {
     const [billingCycle, setBillingCycle] = useState('annually');
-    const router = useRouter();
 
     const plans = {
         creators: [
@@ -116,8 +114,8 @@ export default function PricingPage() {
             <style jsx>{`
                 .pricing-page {
                     min-height: 100vh;
-                    background: #0f0f12;
-                    color: #fff;
+                    background: var(--bg-main);
+                    color: var(--text-main);
                     padding: 2rem 0;
                 }
 
@@ -135,7 +133,7 @@ export default function PricingPage() {
                 }
 
                 .back-link {
-                    color: #a1a1aa;
+                    color: var(--text-muted);
                     display: flex;
                     align-items: center;
                     text-decoration: none;
@@ -143,14 +141,14 @@ export default function PricingPage() {
                 }
 
                 .back-link:hover {
-                    color: #fff;
+                    color: var(--text-main);
                 }
 
                 .pricing-header h1 {
                     font-size: 2rem;
                     font-weight: 700;
                     margin: 0;
-                    color: #fff;
+                    color: var(--text-main);
                 }
 
                 .billing-toggle {
@@ -162,24 +160,26 @@ export default function PricingPage() {
 
                 .toggle-btn {
                     padding: 0.75rem 1.5rem;
-                    border-radius: 8px;
-                    border: none;
-                    background: #1f2026;
-                    color: #a1a1aa;
+                    border-radius: var(--radius-sm);
+                    border: 1px solid var(--border-custom);
+                    background: var(--bg-card);
+                    color: var(--text-muted);
                     cursor: pointer;
-                    font-weight: 600;
+                    font-weight: 500;
                     font-size: 0.9rem;
-                    transition: all 0.2s;
+                    transition: all 0.2s ease;
                 }
 
                 .toggle-btn.active {
-                    background: #5c4dff;
-                    color: #fff;
+                    background: var(--primary-hex);
+                    color: white;
+                    border-color: var(--primary-hex);
                 }
 
                 .toggle-btn:hover:not(.active) {
-                    background: #2a2b33;
-                    color: #fff;
+                    background: var(--bg-card-hover);
+                    color: var(--text-main);
+                    border-color: var(--border-hover);
                 }
 
                 .plans-section {
@@ -192,14 +192,14 @@ export default function PricingPage() {
                 }
 
                 .section-title {
-                    color: #a855f7;
+                    color: var(--primary-hex);
                     font-size: 1.25rem;
                     font-weight: 700;
                     margin: 0 0 0.5rem 0;
                 }
 
                 .section-description {
-                    color: #a1a1aa;
+                    color: var(--text-muted);
                     font-size: 0.9rem;
                     margin: 0;
                 }
@@ -215,7 +215,7 @@ export default function PricingPage() {
                 .pricing-footer {
                     margin-top: 4rem;
                     text-align: center;
-                    color: #a1a1aa;
+                    color: var(--text-muted);
                     font-size: 0.9rem;
                 }
 
@@ -313,32 +313,35 @@ function PlanCard({ plan, billingCycle, onSelect }) {
 
             <style jsx>{`
                 .plan-card {
-                    background: #1a1a1f;
-                    border: 1px solid #2d2e36;
-                    border-radius: 12px;
+                    background: var(--bg-card);
+                    border: 1px solid var(--border-custom);
+                    border-radius: var(--radius);
                     padding: 2rem;
                     position: relative;
                     display: flex;
                     flex-direction: column;
-                    transition: all 0.2s;
+                    transition: all 0.2s ease;
+                    box-shadow: var(--shadow-sm);
                 }
 
                 .plan-card:hover {
-                    border-color: #4d4f5c;
-                    transform: translateY(-2px);
+                    border-color: var(--border-hover);
+                    box-shadow: var(--shadow-md);
+                    transform: translateY(-1px);
                 }
 
                 .plan-card.popular {
-                    border: 2px solid #5c4dff;
-                    background: #1f2026;
+                    border: 2px solid var(--primary-hex);
+                    background: var(--bg-card);
+                    box-shadow: var(--shadow-md);
                 }
 
                 .popular-badge {
                     position: absolute;
                     top: -12px;
                     right: 1.5rem;
-                    background: #5c4dff;
-                    color: #fff;
+                    background: var(--primary-hex);
+                    color: white;
                     padding: 0.25rem 0.75rem;
                     border-radius: 20px;
                     font-size: 0.75rem;
@@ -353,7 +356,7 @@ function PlanCard({ plan, billingCycle, onSelect }) {
                     font-size: 1.75rem;
                     font-weight: 700;
                     margin: 0 0 1rem 0;
-                    color: #fff;
+                    color: var(--text-main);
                 }
 
                 .plan-pricing {
@@ -370,23 +373,23 @@ function PlanCard({ plan, billingCycle, onSelect }) {
                 .price {
                     font-size: 2.5rem;
                     font-weight: 700;
-                    color: #fff;
+                    color: var(--text-main);
                 }
 
                 .price-period {
-                    color: #a1a1aa;
+                    color: var(--text-muted);
                     font-size: 1rem;
                 }
 
                 .original-price {
-                    color: #666;
+                    color: var(--text-subtle);
                     text-decoration: line-through;
                     font-size: 1.25rem;
                     font-weight: 500;
                 }
 
                 .yearly-price {
-                    color: #a1a1aa;
+                    color: var(--text-muted);
                     font-size: 0.9rem;
                 }
 
@@ -403,25 +406,25 @@ function PlanCard({ plan, billingCycle, onSelect }) {
                 }
 
                 .select-btn.primary {
-                    background: #5c4dff;
-                    color: #fff;
+                    background: var(--primary-hex);
+                    color: white;
                 }
 
                 .select-btn.primary:hover {
-                    background: #4a3dd9;
+                    background: var(--primary-hover);
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(92, 77, 255, 0.3);
+                    box-shadow: var(--shadow-md);
                 }
 
                 .select-btn.outline {
                     background: transparent;
-                    color: #5c4dff;
-                    border: 1px solid #5c4dff;
+                    color: var(--primary-hex);
+                    border: 1px solid var(--primary-hex);
                 }
 
                 .select-btn.outline:hover {
-                    background: #5c4dff;
-                    color: #fff;
+                    background: var(--primary-hex);
+                    color: white;
                 }
 
                 .plan-features {
@@ -439,7 +442,7 @@ function PlanCard({ plan, billingCycle, onSelect }) {
                 .feature-group-title {
                     font-size: 0.75rem;
                     font-weight: 700;
-                    color: #a1a1aa;
+                    color: var(--text-muted);
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
                     margin: 0 0 0.75rem 0;
@@ -457,7 +460,7 @@ function PlanCard({ plan, billingCycle, onSelect }) {
                     gap: 0.5rem;
                     margin-bottom: 0.5rem;
                     font-size: 0.9rem;
-                    color: #fff;
+                    color: var(--text-main);
                 }
 
                 .feature-item:last-child {

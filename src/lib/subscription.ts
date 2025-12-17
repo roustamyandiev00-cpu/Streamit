@@ -1,5 +1,5 @@
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 
 const DAY_IN_MS = 86_400_000;
